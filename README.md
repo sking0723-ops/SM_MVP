@@ -1,4 +1,4 @@
-# STACKMAX MVP v2
+# STACKMAX MVP 
 
 Coupon Sources hub with 15 configured legitimate source links:
 CVS, Walgreens, Target, Walmart, Kroger, KCL, Ibotta, Fetch, Coupons.com, Albertsons, Safeway, Dollar General, Family Dollar, Publix and Shopmium.
