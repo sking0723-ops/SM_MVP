@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STACKMAX — Extreme Couponing Tester</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f6f8;color:#15171a}
+button,input,select{font:inherit}.app{max-width:1200px;margin:auto;min-height:100vh;background:#fff}
+header{padding:22px 28px;border-bottom:1px solid #e7e8eb;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:3}
+.logo{font-weight:900;font-size:25px;letter-spacing:-1px}.logo span{font-weight:500;color:#666}
+.badge{font-size:12px;padding:7px 10px;border-radius:999px;background:#eef7ee;color:#27752d;font-weight:700}
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 75px)}
+nav{border-right:1px solid #e7e8eb;padding:18px 12px;background:#fafafa}
+nav button{width:100%;border:0;background:transparent;text-align:left;padding:13px 14px;border-radius:10px;margin-bottom:4px;cursor:pointer;font-weight:650;color:#555}
+nav button.active,nav button:hover{background:#15171a;color:#fff}
+main{padding:28px;max-width:970px;width:100%;margin:auto}
+h1{font-size:34px;letter-spacing:-1.3px;margin:0 0 7px}h2{margin-top:0}.sub{color:#686c73;margin:0 0 24px}
+.panel{border:1px solid #e3e5e8;border-radius:16px;padding:20px;margin-bottom:20px;background:#fff;box-shadow:0 2px 8px #00000008}
+.search{display:flex;gap:10px}.search input{flex:1;padding:14px 15px;border:1px solid #d5d8dc;border-radius:10px}
+.primary{border:0;background:#15171a;color:#fff;padding:13px 17px;border-radius:10px;font-weight:750;cursor:pointer}
+.secondary{border:1px solid #d8dade;background:#fff;padding:11px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.deal{border:1px solid #e3e5e8;border-radius:14px;padding:16px}.deal .emoji{font-size:28px}.price{font-size:25px;font-weight:850;margin:7px 0}.save{color:#2b7d32;font-weight:750}.muted{color:#777;font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px}.pill{padding:5px 8px;background:#f0f1f3;border-radius:7px;font-size:12px;font-weight:700}
+.stackline{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee}.stackline:last-child{border:0}
+.total{font-size:30px;font-weight:900}.green{color:#287b31}.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}.tabs button{border:1px solid #ddd;background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}.tabs button.sel{background:#15171a;color:#fff}
+.toast{position:fixed;right:22px;bottom:22px;background:#15171a;color:white;padding:14px 17px;border-radius:12px;display:none;z-index:9}
+.empty{padding:30px;text-align:center;color:#777}
+@media(max-width:760px){.layout{grid-template-columns:1fr}nav{display:flex;overflow:auto;border-right:0;border-bottom:1px solid #e7e8eb}nav button{min-width:max-content}.grid{grid-template-columns:1fr 1fr}main{padding:18px}.search{flex-direction:column}}
+@media(max-width:480px){.grid{grid-template-columns:1fr}header{padding:17px}.logo{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="logo">STACKMAX <span>beta</span></div><div class="badge">● TEST MODE</div></header>
+<div class="layout">
+<nav>
+<button class="active" onclick="show('dashboard',this)">🏠 Dashboard</button>
+<button onclick="show('deals',this)">🔥 Best Deals</button>
+<button onclick="show('list',this)">🛒 My List</button>
+<button onclick="show('vault',this)">🎟 Coupon Vault</button><button onclick="show('sources',this)">🌐 Coupon Sources</button>
+<button onclick="show('builder',this)">⚡ Stack Builder</button>
+<button onclick="show('shop',this)">📱 Shopping Mode</button>
+</nav>
+<main id="main"></main>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const products=[
+{name:"Tide PODS",brand:"Tide",price:19.99,final:7.49,save:12.50,icon:"🧺",store:"Target",coupons:["Target Circle −$3","Manufacturer −$2","Cashback −$4.50"]},
+{name:"Charmin Ultra Soft",brand:"Charmin",price:14.99,final:6.99,save:8.00,icon:"🧻",store:"Walmart",coupons:["Store offer −$3","Cashback −$5"]},
+{name:"Bounty Paper Towels",brand:"Bounty",price:12.99,final:4.49,save:8.50,icon:"🧻",store:"CVS",coupons:["Sale −$4","Coupon −$2","Reward −$2.50"]},
+{name:"Crest 3D White",brand:"Crest",price:7.99,final:1.99,save:6.00,icon:"🪥",store:"Walgreens",coupons:["Sale −$2","Digital −$2","Reward −$2"]},
+{name:"Dawn Powerwash",brand:"Dawn",price:6.99,final:2.49,save:4.50,icon:"🧼",store:"Target",coupons:["Circle −$2","Manufacturer −$1","Cashback −$1.50"]},
+{name:"Purina Dog Chow",brand:"Purina",price:18.99,final:9.49,save:9.50,icon:"🐶",store:"Safeway",coupons:["Club −$3","Manufacturer −$2.50","Rebate −$4"]}
+];
+let list=JSON.parse(localStorage.getItem("stackmaxList")||"[]");
+
+function money(x){return "$"+x.toFixed(2)}
+function saveList(){localStorage.setItem("stackmaxList",JSON.stringify(list))}
+function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",2200)}
+function add(name){if(!list.includes(name)){list.push(name);saveList();toast("Added to My List")}else toast("Already on your list")}
+
+function show(page,btn){
+ document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active")); if(btn)btn.classList.add("active");
+ let m=document.getElementById("main");
+ if(page==="dashboard")m.innerHTML=dashboard();
+ if(page==="deals")m.innerHTML=deals();
+ if(page==="list")m.innerHTML=mylist();
+ if(page==="vault")m.innerHTML=vault();
+ if(page==="sources")m.innerHTML=sources();
+ if(page==="builder")m.innerHTML=builder();
+ if(page==="shop")m.innerHTML=shop();
+}
+function dashboard(){return `<h1>Save more. Stack smarter.</h1><p class="sub">Your personal extreme-couponing optimizer.</p>
+<div class="panel"><h2>💬 Ask STACKMAX anything</h2>
+<p class="muted">Examples: “Tide Pods”, “toilet paper under $5”, “cheap dog food”, or “I have $50 — build me the biggest household haul.”</p></div>
+<div class="panel"><div class="row"><div><b>What are you buying?</b><div class="muted">Type what you want in plain English — product, budget, or shopping goal</div></div><span class="pill">15 coupon sources configured</span></div><br><div class="search"><input id="q" placeholder="Try “Tide”, “toothpaste”, “paper towels”, or “dog food under $10”"><button class="primary" onclick="search()">Find My Stack</button><button class="secondary" onclick="show('sources')">View Sources</button></div></div>
+<div class="panel">
+<div class="row"><div><h2>🌐 Coupon Intelligence</h2><div class="muted">KCL-style verified deal source + retailer offers</div></div><span class="pill">DEMO SOURCE</span></div>
+<p class="muted">STACKMAX can organize public/authorized offer sources, then send customers to the legitimate source to activate an offer. KCL publishes coupons by brand/category and deal formulas that combine coupons and promotions.</p>
+<button class="secondary" onclick="window.open('https://thekrazycouponlady.com/coupons','_blank')">Explore KCL Coupons ↗</button>
+</div>
+<div class="panel"><div class="row"><h2>🔥 Today's extreme deals</h2><button class="secondary" onclick="show('deals')">See all</button></div><div class="grid">${products.slice(0,3).map(card).join("")}</div></div>
+<div class="panel"><h2>💡 Your savings snapshot</h2><div class="grid"><div><div class="muted">Tracked items</div><div class="total">${list.length}</div></div><div><div class="muted">Potential savings</div><div class="total green">$38.50</div></div><div><div class="muted">Membership</div><div class="total">MAX</div></div></div></div>`}
+function card(p){return `<div class="deal"><div class="emoji">${p.icon}</div><div class="row"><b>${p.name}</b><span class="pill">${p.store}</span></div><div class="muted">${p.brand} · <b>KCL</b> + retailer sources</div><div class="price">${money(p.final)} <del class="muted">${money(p.price)}</del></div><div class="save">Save ${money(p.save)} · ${Math.round(p.save/p.price*100)}%</div><br><button class="secondary" onclick="add('${p.name}')">＋ Add to list</button></div>`}
+function deals(){return `<h1>Best Deals</h1><p class="sub">Deals ranked by effective price and savings.</p><div class="tabs"><button class="sel">All</button><button>Grocery</button><button>Household</button><button>Beauty</button><button>Pet</button></div><div class="grid">${products.map(card).join("")}</div>`}
+function mylist(){let items=products.filter(p=>list.includes(p.name));return `<h1>My List</h1><p class="sub">STACKMAX watches these products for better combinations.</p><div class="panel">${items.length?items.map(p=>`<div class="stackline"><span>${p.icon} <b>${p.name}</b></span><span class="green">Best: ${money(p.final)}</span></div>`).join(""):`<div class="empty">Your list is empty.<br><br>Add products from Best Deals.</div>`}</div><button class="primary" onclick="show('builder')">Build My Ultimate Stack →</button>`}
+function vault(){return `<h1>Coupon Vault</h1><p class="sub">A test view of coupons matched to your tracked products.</p><div class="panel">${products.flatMap(p=>p.coupons.map((c,i)=>`<div class="stackline"><span><b>${p.name}</b><div class="muted">${c}</div></span><button class="secondary" onclick="toast('Coupon marked ready')">${i===0?'Activate':'Save'}</button></div>`)).join("")}</div>`}
+function builder(){let p=products.find(x=>x.name==="Tide PODS");return `<h1>⚡ Stack Builder</h1><p class="sub">The optimizer chooses the strongest compatible savings path.</p><div class="panel"><div class="row"><div><h2>${p.icon} ${p.name}</h2><div class="muted">${p.store} · Test product</div></div><span class="pill">STACK SCORE 96/100</span></div><br>${p.coupons.map((c,i)=>`<div class="stackline"><span>${i+1}. ${c}</span><b>${i<2?'Eligible':'Rebate'}</b></div>`).join("")}<div class="stackline"><b>Regular price</b><b>${money(p.price)}</b></div><div class="stackline"><b>Total savings</b><b class="green">−${money(p.save)}</b></div><div class="stackline"><b>Estimated final cost</b><span class="total green">${money(p.final)}</span></div><br><button class="primary" onclick="toast('Stack saved to Shopping Mode')">Save This Stack</button></div><div class="panel"><b>⚠️ Compatibility check</b><p class="muted">Demo data only. In a production app, each offer would be checked against retailer/manufacturer terms, SKU eligibility, quantity limits, dates, and stacking rules.</p></div>`}
+
+const couponSources=[
+{name:"CVS",type:"Retailer",detail:"ExtraCare coupons, ExtraBucks and weekly deals",url:"https://www.cvs.com/coupons/guest",mode:"Official"},
+{name:"Walgreens",type:"Retailer",detail:"myWalgreens digital coupons and store rewards",url:"https://www.walgreens.com/topic/help/generalhelp/coupon_policy_main.jsp",mode:"Official"},
+{name:"Target",type:"Retailer",detail:"Target Circle offers and manufacturer coupons",url:"https://www.target.com/help/articles/promotions-coupons/coupon-deals",mode:"Official"},
+{name:"Walmart",type:"Retailer",detail:"Manufacturer coupons and current savings",url:"https://www.walmart.com/",mode:"Official"},
+{name:"Kroger",type:"Retailer",detail:"Digital and paper coupons plus Shopper's Card offers",url:"https://www.kroger.com/i/terms/coupon-policy",mode:"Official"},
+{name:"The Krazy Coupon Lady",type:"Deal intelligence",detail:"Curated manufacturer coupons, store deals and deal formulas",url:"https://thekrazycouponlady.com/coupons",mode:"External / partner"},
+{name:"Ibotta",type:"Cashback",detail:"Personalized cashback offers and retailer shopping links",url:"https://home.ibotta.com/",mode:"External / partner"},
+{name:"Fetch",type:"Receipt rewards",detail:"Product and spend offers redeemed from receipts",url:"https://www.fetch.com/",mode:"External / partner"},
+{name:"Coupons.com",type:"Manufacturer coupons",detail:"Printable and digital manufacturer coupon source",url:"https://www.coupons.com/",mode:"External / partner"},
+{name:"Albertsons",type:"Retailer",detail:"Digital offers, loyalty savings and weekly deals",url:"https://www.albertsons.com/",mode:"Official"},
+{name:"Safeway",type:"Retailer",detail:"Digital offers, loyalty savings and weekly deals",url:"https://www.safeway.com/",mode:"Official"},
+{name:"Dollar General",type:"Retailer",detail:"Digital coupons and DG promotions",url:"https://www.dollargeneral.com/",mode:"Official"},
+{name:"Family Dollar",type:"Retailer",detail:"Digital coupons and Smart Coupons",url:"https://www.familydollar.com/",mode:"Official"},
+{name:"Publix",type:"Retailer",detail:"Weekly ad, digital coupons and promotions",url:"https://www.publix.com/",mode:"Official"},
+{name:"Shopmium",type:"Cashback",detail:"Cashback offers with receipt/product verification",url:"https://www.shopmium.com/",mode:"External / partner"}];
+
+function sources(){return `<h1>🌐 Coupon Sources</h1><p class="sub">STACKMAX can search legitimate retailer, coupon and cashback sources. External sources require permitted links, feeds or partnerships before production integration.</p><div class="panel"><div class="row"><b>Source coverage</b><span class="pill">${couponSources.length} sources configured</span></div><p class="muted">The production engine should normalize each source by UPC/GTIN, expiration, quantity limits, account requirements and stacking rules before calculating a final price.</p></div><div class="grid">${couponSources.map(s=>`<div class="deal"><div class="row"><b>${s.name}</b><span class="pill">${s.type}</span></div><p class="muted">${s.detail}</p><span class="pill">${s.mode}</span><br><br><button class="secondary" onclick="window.open('${s.url}','_blank')">Open Source ↗</button></div>`).join("")}</div>`}
+function shop(){return `<h1>📱 Shopping Mode</h1><p class="sub">One item at a time, with the exact savings steps.</p><div class="panel"><div class="pill">1 OF 3</div><h2>🧺 Tide PODS</h2><div class="stackline"><span>Activate Target Circle</span><button class="secondary" onclick="toast('Demo: activation opened')">Activate</button></div><div class="stackline"><span>Use manufacturer coupon</span><button class="secondary" onclick="toast('Demo: coupon saved')">Save</button></div><div class="stackline"><span>Submit cashback</span><button class="secondary" onclick="toast('Demo: rebate instructions opened')">View</button></div><br><div class="total green">Expected: $7.49</div><br><button class="primary" onclick="toast('Next item loaded')">Done — Next Item →</button></div>`}
+function vaultSearch(q){return products.filter(p=>(p.name+" "+p.brand).toLowerCase().includes(q.toLowerCase()))}
+function search(){
+ let q=document.getElementById("q").value.trim();
+ if(!q)return toast("Tell STACKMAX what you want");
+ let r=vaultSearch(q);
+ if(!r.length){
+   const words=q.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+   r=products.filter(p=>words.some(w=>(p.name+" "+p.brand).toLowerCase().includes(w)));
+ }
+ document.getElementById("main").innerHTML=`<h1>Results for “${q}”</h1>
+ <p class="sub">STACKMAX searched your selected sources and matched the best available demo offers.</p>
+ <div class="panel">
+   <div class="row"><b>🔎 Search sources</b><span class="pill">STACKMAX + 15 SOURCES</span></div>
+   <p class="muted">KCL is shown as an external deal source in this prototype. Production integration would use authorized access/links.</p>
+   <button class="secondary" onclick="window.open('https://thekrazycouponlady.com/coupons','_blank')">Explore KCL Coupons ↗</button>
+ </div>
+ ${r.length?`<div class="grid">${r.map(card).join("")}</div>`:`<div class="panel empty">No demo match. In the real app, the search engine would query connected offer sources and understand natural-language requests.</div>`}`;
+}
+
+show("dashboard",document.querySelector("nav button"));
+</script>
+</body>
+</html>
